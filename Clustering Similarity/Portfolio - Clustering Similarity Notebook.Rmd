@@ -1,0 +1,101 @@
+---
+title: "Clustering Similarity"
+output: html_notebook
+---
+
+In this example, clustering algorithms are performed on a dataset of automobile measurements for acceleration and rotation
+The goal is to separate the data into classes of driving
+It is known that there are three classes (NORMAL, SLOW, AGGRESSIVE), but this can still be explored 
+
+### kMeans Setup
+
+```{r}
+
+# Read in train and test sets
+dataTrain <- read.csv(".//train_motion_data.csv")
+dataTest <- read.csv(".//test_motion_data.csv")
+
+dataClasses <- dataTrain[7]
+
+# Scale sets
+dataTrain <- scale(dataTrain[-7])
+dataTest <- scale(dataTest[-7])
+
+# Concat class column
+dataTrain <- cbind(dataTrain, dataClasses)
+
+```
+
+## kMeans Clustering
+
+```{r}
+
+dataClusterKMeans <- kmeans(dataTrain[, 1:7], 3, nstart=20)
+dataClusterKMeans
+
+```
+
+# Comparing Clusters with Classes
+
+```{r}
+
+table(dataClusterKMeans$cluster, dataTrain$Class)
+
+```
+## Heirarchical Clustering
+
+```{r}
+
+# Subset the training data
+set.seed(1324)
+i <- sample(1:nrow(dataTrain), 50, replace=FALSE)
+
+hdataTrain <- dataTrain[i,]
+
+# Display Counts of Class
+nrow(hdataTrain[hdataTrain$Class=="AGGRESSIVE",])
+nrow(hdataTrain[hdataTrain$Class=="NORMAL",])
+nrow(hdataTrain[hdataTrain$Class=="SLOW",])
+
+```
+
+## Adjust distances
+
+```{r}
+
+d <- dist(hdataTrain[-8])
+fit.average <- hclust(d, method="average")
+plot(fit.average, hang=-1, cex=.8)
+
+```
+
+## Cutting dendogram
+
+```{r}
+
+for(c in 1:9){
+  cluster_cut <- cutree(fit.average, c)
+  table_cut <- table(cluster_cut, hdataTrain$Class)
+  print(table_cut)
+  #ri <- rand.index(table_cut)
+  print(paste("cut=", c))
+}
+
+```
+
+As can be seen above, hierarchical clustering doesn't work well with this dataset since there isn't hierarchy in the different driving classes
+
+## Model Based Clustering
+
+```{r}
+
+library(mclust)
+fit <- Mclust(dataTrain[-8])
+summary(fit)
+plot(fit)
+
+```
+
+## Comparison
+
+Above are three approaches to clustering: kMeans, Hierarchical, and Model Based. Although powerful for exploring data that has an inherent hierarchy due to the visualization of all the branches of clusters, hierarchical clustering didn't fit the dataset well. This is due to the data used not having a hierarchical structure. kMeans did an acceptable job of separating the dataset into clusters, being able to cluster the data instances significantly better than random assignment. Most robust would likely be model based clustering, being able to cluster according to flexible structures. The algorithm was able to deduce an ellipsoidal, equal orientation clustering best fit the data.
